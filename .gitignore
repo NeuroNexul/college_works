@@ -45,5 +45,5 @@ coverage.xml
 .venv
 
 # Build files
-database.db
+**/*.db*
 **/db

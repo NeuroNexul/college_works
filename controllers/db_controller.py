@@ -1,8 +1,10 @@
 import sqlite3
 
-
 def create_tables(cursor: sqlite3.Cursor):
-    # Create all necessory tables
+    """
+    Create the tables in the database if they do not exist
+    
+    """
 
     # Users table
     cursor.execute('''

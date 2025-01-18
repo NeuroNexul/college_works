@@ -54,3 +54,20 @@ python app.py
 ```
 
 The application will be available at `http://localhost:5000/`.
+
+## Database Observations
+
+In this project we have used SQLite database. The database is stored in a file named `database.db`. The database has the following tables:
+
+- `users` table: This table stores the user information.
+- `subjects` table: This table stores the subjects for each course.
+- `chapters` table: This table stores the chapters for each course.
+- `quiz` table: This table stores the quiz questions for each chapter.
+- `questions` table: This table stores the questions for each quiz.
+- `scores` table: This table stores the scores for each user.
+
+To view the database, you can use the [DB Browser for SQLite](https://sqlitebrowser.org/). Or, in the docker-compose file, you can use the `phpliteadmin` service to view the database. The `phpliteadmin` service is available at `http://localhost:8081/`. To start the `phpliteadmin` service, run the following command:
+
+```bash
+docker-compose up -d
+```
