@@ -1,7 +1,7 @@
 <h1 align="middle">Modern Application Development I</h1>
 
 <img
-  src="https://lh7-rt.googleusercontent.com/docsz/AD_4nXfd9ouBAW-ZmgoB8ofs8V958xDE4v0RONwtWSiPg7Jb4hHeSfuDA1JNnaV52ISAvUHSZqgP1WG4tUAxbmq41_am9BAVa8i3Vp4CPwqEl8AMsWB816SKyNxrZMVFVBpdj0rxBOZVHQ?key=eTnvMdFybwOblM8547xjyiaQ"
+  src="./static/images/Quiz_master wired frame.png"
   alt="Modern Application Development I"
   align="middle"
   style="border-radius: 10px"
@@ -42,7 +42,8 @@ Create the database and populate it with some initial data:
 
 ```bash
 # Create the database
-python create_db.py
+flask db init
+flask db migrate
 ```
 
 ## Running the Application
@@ -55,9 +56,9 @@ python app.py
 
 The application will be available at `http://localhost:5000/`.
 
-## Database Observations
+## Database Administration
 
-In this project we have used SQLite database. The database is stored in a file named `database.db`. The database has the following tables:
+In this project we have used SQLite database. The database is stored in a file named `./db/database.db`. The database has the following tables:
 
 - `users` table: This table stores the user information.
 - `subjects` table: This table stores the subjects for each course.
@@ -69,5 +70,5 @@ In this project we have used SQLite database. The database is stored in a file n
 To view the database, you can use the [DB Browser for SQLite](https://sqlitebrowser.org/). Or, in the docker-compose file, you can use the `phpliteadmin` service to view the database. The `phpliteadmin` service is available at `http://localhost:8081/`. To start the `phpliteadmin` service, run the following command:
 
 ```bash
-docker-compose up -d
+docker compose -f 'docker-compose.yml' up -d --build 'phpliteadmin'
 ```

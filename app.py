@@ -1,9 +1,13 @@
-from flask import Flask, render_template, request, g
+from flask import Flask, render_template, request, g, session
 import sqlite3
+from flask_bootstrap import Bootstrap5
+from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from pathlib import Path
 import os
-from controllers import db_controller
+from models import db, create_migration, User
+from flask_login import LoginManager, current_user
+
 from routes import auth
 
 
@@ -27,6 +31,27 @@ app = Flask(__name__,
             template_folder="templates",
             subdomain_matching=True)
 
+# Mount SQLAlchemy to the Flask app
+# This will allow the app to interact with a SQL database using the ORM.
+#
+# DATABASE_URL: The URL to the database. This can be a local SQLite database or a remote database like PostgreSQL.
+#               Example: 'sqlite:///database.db'
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + \
+    os.path.join(os.path.abspath(os.getcwd()), './db/database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+# Do the migrations
+create_migration(app)
+
+# Create the tables in the database if they do not exist
+with app.app_context():
+    db.create_all()
+
+# Initialize the app with Bootstrap5
+bootstrap = Bootstrap5(app)
+
 
 # Define basic configuration for the app
 
@@ -44,48 +69,49 @@ app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")
 
 app.url_map.default_subdomain = ""
 
+# Set the secret key to enable sessions
+# The secret key is used to secure the session data.
+# It should be a random string with high entropy.
 
-# Setup on demand database connection
-# This is a common pattern to avoid creating a new connection for each request.
-# The connection is created when the first request is received and is closed after the last request is processed.
-# This way the connection is only open when it's needed.
+app.secret_key = os.getenv("SECRET_KEY")
 
-# Define a function to get the database connection
+# Initialize the Bcrypt extension
+# This will be used to hash passwords securely.
+bcrypt = Bcrypt(app)
+app.config["BCRYPT"] = bcrypt
 
-def get_db():
-    db: sqlite3.Connection = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect("database.db")
-    return db
+# Initialize the LoginManager extension
+# This will be used to manage user authentication.
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "auth.login"
 
-
-# Define a function to close the database connection
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+# Define the function that will be called to load a user
+# This function should return the user object based on the user ID.
+# The user ID is stored in the session cookie and is used to load the user object.
+# The user object should implement the UserMixin class from Flask-Login.
 
 
-# Setup the database
-# This will open the context of the application outside the request.
-
-with app.app_context():
-    db_controller.create_tables(get_db().cursor())
-
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
 
 # Import the routes blueprints
 # This is a common pattern to keep the code organized.
 # Each blueprint can have its own routes and views.
 # The blueprints can be registered with the Flask application.
 
+
 app.register_blueprint(auth.bp)
 
 
 @app.route("/")
 def hello_world():
-    return render_template("index.html")
+    # return render_template("index.html")
+    if current_user.is_authenticated:
+        return str(current_user.username)
+    else:
+        return "Hello, World!"
 
 
 # Start the server with the 'run()' method, if the script is executed directly.

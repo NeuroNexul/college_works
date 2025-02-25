@@ -1,6 +1,20 @@
-version: "3.7"
-
 services:
+  app:
+    hostname: app
+    container_name: ${CONTAINER_NAME}-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    networks:
+      - internal
+    environment:
+      - TZ=Europe/Brussels
+
   phpliteadmin:
     hostname: phpliteadmin
     container_name: ${CONTAINER_NAME}-phpliteadmin
