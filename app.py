@@ -1,14 +1,18 @@
 from flask import Flask, render_template, request, g, session
-import sqlite3
+from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_bcrypt import Bcrypt
-from dotenv import load_dotenv
-from pathlib import Path
-import os
+import sqlite3
 from models import db, create_migration, User
-from flask_login import LoginManager, current_user
 
-from routes import auth
+# Additional utility imports
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Import the routes blueprint
+# This is a common pattern to keep the code organized.
+from routes import auth, user, admin
 
 
 # Load environment variables from a .env file
@@ -31,6 +35,13 @@ app = Flask(__name__,
             template_folder="templates",
             subdomain_matching=True)
 
+# Initialize the app with Bootstrap5
+bootstrap = Bootstrap5(app)
+
+# Add divmod to the Jinja2 environment
+app.jinja_env.globals.update(divmod=divmod)
+
+
 # Mount SQLAlchemy to the Flask app
 # This will allow the app to interact with a SQL database using the ORM.
 #
@@ -40,17 +51,14 @@ app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + \
     os.path.join(os.path.abspath(os.getcwd()), './db/database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize the database with the app
+# And do the migrations
 db.init_app(app)
-
-# Do the migrations
 create_migration(app)
 
 # Create the tables in the database if they do not exist
 with app.app_context():
     db.create_all()
-
-# Initialize the app with Bootstrap5
-bootstrap = Bootstrap5(app)
 
 
 # Define basic configuration for the app
@@ -61,24 +69,25 @@ bootstrap = Bootstrap5(app)
 #
 # SERVER_NAME: The name of the server. This is used to generate URLs outside of the request context.
 #              Example: 'example.com:5000'
-
 app.config["SERVER_NAME"] = os.getenv("SERVER_NAME")
+
 
 # Set the default subdomain. Flask will serve the root content to this subdomain.
 # To serve content to the root domain, set this to an empty string.
-
 app.url_map.default_subdomain = ""
+
 
 # Set the secret key to enable sessions
 # The secret key is used to secure the session data.
 # It should be a random string with high entropy.
-
 app.secret_key = os.getenv("SECRET_KEY")
+
 
 # Initialize the Bcrypt extension
 # This will be used to hash passwords securely.
 bcrypt = Bcrypt(app)
 app.config["BCRYPT"] = bcrypt
+
 
 # Initialize the LoginManager extension
 # This will be used to manage user authentication.
@@ -86,27 +95,35 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
 
+
+@login_manager.user_loader
 # Define the function that will be called to load a user
 # This function should return the user object based on the user ID.
 # The user ID is stored in the session cookie and is used to load the user object.
 # The user object should implement the UserMixin class from Flask-Login.
-
-
-@login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
+
+
+@login_manager.unauthorized_handler
+# Define the unauthorized handler
+# This function will be called when a user tries to access a protected route without being authenticated.
+# It should return a response indicating that the user is unauthorized.
+def unauthorized_handler():
+    return 'Unauthorized', 401
+
 
 # Import the routes blueprints
 # This is a common pattern to keep the code organized.
 # Each blueprint can have its own routes and views.
 # The blueprints can be registered with the Flask application.
-
-
 app.register_blueprint(auth.bp)
+app.register_blueprint(user.bp)
+app.register_blueprint(admin.bp)
 
 
 @app.route("/")
-def hello_world():
+def index():
     # return render_template("index.html")
     if current_user.is_authenticated:
         return str(current_user.username)

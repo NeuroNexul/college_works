@@ -42,6 +42,8 @@ class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey(
+        'subjects.id'), nullable=False)
 
     def __repr__(self):
         return f"<Chapter(name='{self.name}')>"
@@ -67,6 +69,7 @@ class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
     question_statement = db.Column(db.String, nullable=False)
+    correct_option = db.Column(db.String, nullable=False)
     option1 = db.Column(db.String, nullable=False)
     option2 = db.Column(db.String, nullable=False)
     option3 = db.Column(db.String, nullable=False)
