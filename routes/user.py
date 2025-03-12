@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, url_for, request, render_template, jsonify
 from flask_login import current_user
-from models import Quiz, Question, Chapter, Subject, Score, db
+from models.models import Quiz, Question, Chapter, Subject, Score, db
 from datetime import datetime
 
 bp = Blueprint("user", __name__)

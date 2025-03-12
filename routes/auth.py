@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, g, current_app
-from models import db, User
+from models.models import db, User
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime
 

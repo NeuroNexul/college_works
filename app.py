@@ -1,9 +1,8 @@
-from flask import Flask, render_template, request, g, session, url_for, redirect
+from flask import Flask, url_for, redirect
 from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_bcrypt import Bcrypt
-import sqlite3
-from models import db, create_migration, User
+from models.models import db, create_migration, User
 
 # Additional utility imports
 import os

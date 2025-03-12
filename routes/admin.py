@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from functools import wraps, reduce
 
-from models import db, Subject, Chapter, Quiz, Question, Score
+from models.models import db, Subject, Chapter, Quiz, Question, Score
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
