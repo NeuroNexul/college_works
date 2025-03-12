@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import current_user
 from datetime import datetime
 import os
-from functools import wraps
+from functools import wraps, reduce
 
 from models import db, Subject, Chapter, Quiz, Question, Score
 
@@ -259,3 +259,75 @@ def delete_question(question_id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@bp.route('/summary')
+@login_admin_required
+def summary():
+    scores = Score.query.filter_by(user_id=current_user.id).all()
+
+    summary_data = []
+
+    # Get all the subjects
+    subjects = Subject.query.all()
+    for subject in subjects:
+        chapters = Chapter.query.filter_by(subject_id=subject.id).all()
+        quizs = Quiz.query.filter(Quiz.chapter_id.in_(
+            [chapter.id for chapter in chapters])).all()
+        scores = Score.query.filter(Score.quiz_id.in_(
+            [quiz.id for quiz in quizs])).all()
+
+        summary_data.append({
+            'subject': {
+                'name': subject.name,
+                'description': subject.description
+            },
+            'top_scores': reduce(lambda a, b: a if a > b else b, [score.total_scored for score in scores], 0),
+            'user_attempts': len(scores)
+        })
+
+    return render_template('admin/summary.html', user=current_user, summary_data=summary_data)
+
+
+@bp.route("/search", methods=["GET"])
+@login_admin_required
+def search():
+    query = request.args.get("search", "").strip()
+
+    # Subjects
+    subjects = Subject.query.filter(Subject.name.ilike(f"%{query}%")).all()
+
+    # Chapters
+    chapters = Chapter.query.filter(Chapter.name.ilike(f"%{query}%")).all()
+    chapters_data = []
+    for chapter in chapters:
+        chapter_dict = chapter.as_dict()
+        subject = Subject.query.filter_by(id=chapter.subject_id).first()
+        if subject:  # Make sure the subject exists to prevent errors
+            chapter_dict["subject"] = subject.name  # Access subject dict
+        else:
+            chapter_dict["subject"] = None
+        chapters_data.append(chapter_dict)
+
+    quizzes = Quiz.query.filter(Quiz.remarks.ilike(f"%{query}%")).all()
+    quizzes_data = []
+    for quiz in quizzes:
+        quiz_dict = quiz.as_dict()
+        chapter = Chapter.query.filter_by(id=quiz.chapter_id).first()
+        subject = Subject.query.filter_by(id=chapter.subject_id).first()
+        questions = Question.query.filter_by(quiz_id=quiz.id).all()
+        if chapter: # Make sure the chapter exists to prevent errors
+            quiz_dict["chapter"] = chapter.name
+        else:
+            quiz_dict["chapter"] = None
+        if subject: # Make sure the subject exists to prevent errors
+            quiz_dict["subject"] = subject.name
+        else:
+            quiz_dict["subject"] = None
+        quiz_dict["num_questions"] = len(questions)
+        quizzes_data.append(quiz_dict)
+
+    if current_user.is_authenticated:
+        return render_template("admin/search.html", user=current_user, subjects=subjects, chapters=chapters_data, quizes=quizzes_data)
+    else:
+        return redirect(url_for("auth.login"))

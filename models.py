@@ -24,6 +24,9 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return f"<User(username='{self.username}')>"
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class Subject(db.Model):
     __tablename__ = 'subjects'
@@ -34,6 +37,9 @@ class Subject(db.Model):
 
     def __repr__(self):
         return f"<Subject(name='{self.name}')>"
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Chapter(db.Model):
@@ -48,6 +54,9 @@ class Chapter(db.Model):
     def __repr__(self):
         return f"<Chapter(name='{self.name}')>"
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class Quiz(db.Model):
     __tablename__ = 'quiz'
@@ -61,6 +70,9 @@ class Quiz(db.Model):
 
     def __repr__(self):
         return f"<Quiz(date_of_quiz='{self.date_of_quiz}')>"
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Question(db.Model):
@@ -78,6 +90,9 @@ class Question(db.Model):
     def __repr__(self):
         return f"<Question(question_statement='{self.question_statement}')>"
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class Score(db.Model):
     __tablename__ = 'scores'
@@ -90,3 +105,6 @@ class Score(db.Model):
 
     def __repr__(self):
         return f"<Score(score='{self.score}')>"
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

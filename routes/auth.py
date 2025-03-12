@@ -38,10 +38,10 @@ def register():
         login_user(new_user)
 
         # Redirect to the home page
-        return redirect(url_for("hello_world"))
+        return redirect(url_for("index"))
     else:
         if current_user.is_authenticated:
-            return redirect(url_for("hello_world"))
+            return redirect(url_for("index"))
         else:
             return render_template("auth/register.html")
 
@@ -65,7 +65,7 @@ def login():
                 login_user(user)
 
                 # Redirect to the home page
-                return redirect(url_for("hello_world"))
+                return redirect(url_for("index"))
             else:
                 return render_template("auth/login.html", errors=["Invalid password"])
         else:
@@ -73,7 +73,7 @@ def login():
 
     else:
         if current_user.is_authenticated:
-            return redirect(url_for("hello_world"))
+            return redirect(url_for("index"))
         else:
             return render_template("auth/login.html")
 

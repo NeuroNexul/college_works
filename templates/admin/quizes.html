@@ -3,7 +3,7 @@
 {% block content %}
     <div class="my-4 px-4">
         <!-- <div class="d-flex flex-wrap flex-column flex-lg-row gap-4"> -->
-        <div class="d-grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));">
+        <div class="d-grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); grid-template-rows: masonry;">
 
             {% if quizzes|length == 0 %}
                 <div class="alert alert-warning w-100" role="alert">
@@ -36,7 +36,7 @@
                                             <tr>
                                                 <td>{{ question.id }}</td>
                                                 <td>{{ question.question_statement }}</td>
-                                                <td>
+                                                <td class="d-flex gap-2">
                                                     <a href="/admin/edit-question/{{ question.id }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                                     <a href="/admin/delete-question/{{ question.id }}" class="btn btn-sm btn-outline-danger">Delete</a>
                                                 </td>

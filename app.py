@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, session
+from flask import Flask, render_template, request, g, session, url_for, redirect
 from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_bcrypt import Bcrypt
@@ -33,7 +33,7 @@ load_dotenv(dotenv_path=dotenv_path)
 app = Flask(__name__,
             static_folder="static",
             template_folder="templates",
-            subdomain_matching=True)
+            subdomain_matching=False)
 
 # Initialize the app with Bootstrap5
 bootstrap = Bootstrap5(app)
@@ -126,9 +126,13 @@ app.register_blueprint(admin.bp)
 def index():
     # return render_template("index.html")
     if current_user.is_authenticated:
-        return str(current_user.username)
+        # Check if user is admin
+        if current_user.username == os.getenv('SERVER_ADMIN_UNAME'):
+            return redirect(url_for("admin.index"))
+        else:
+            return redirect(url_for("user.dashboard"))
     else:
-        return "Hello, World!"
+        return redirect(url_for("auth.login"))
 
 
 # Start the server with the 'run()' method, if the script is executed directly.
