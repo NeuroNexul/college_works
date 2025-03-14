@@ -1,9 +1,47 @@
-{% extends "user/user_base.html" %}
+{% extends "admin/admin_base.html" %}
 {% block title %}Search Page{% endblock %}
 {% block content %}
-<div class="container mt-5">
+<div class="container py-5">
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title text-center">Available Users</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Email Address/Username</th>
+                            <th>Qualification</th>
+                            <th>Date of Birth</th>
+                            <th>Role</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users|length == 0 %}
+                            <tr>
+                                <td colspan="6" class="text-center">No users available</td>
+                            </tr>
+                        {% endif %}
+
+                        {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.full_name }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.qualification }}</td>
+                                <td>{{ user.dob.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ user.role }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h3 class="card-title text-center">Available Subjects</h3>
             <div class="table-responsive">
@@ -35,7 +73,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h3 class="card-title text-center">Available Chapters</h3>
             <div class="table-responsive">
@@ -69,7 +107,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h3 class="card-title text-center">Available Quizes</h3>
             <div class="table-responsive">

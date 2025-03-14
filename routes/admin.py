@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from functools import wraps, reduce
 
-from models.models import db, Subject, Chapter, Quiz, Question, Score
+from models.models import db, Subject, Chapter, Quiz, Question, Score, User
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -18,7 +18,7 @@ def login_admin_required(func):
             return redirect(url_for('auth.login'))
 
         # Check if the user is an admin
-        if not current_user.username == os.getenv('SERVER_ADMIN_UNAME'):
+        if not current_user.role == "admin":
             return redirect(url_for('index'))
 
         return func(*args, **kwargs)
@@ -67,7 +67,7 @@ def index():
 @bp.route('/quizes')
 @login_admin_required
 def quizes():
-    quizzes = Quiz.query.group_by(Quiz.date_of_quiz).all()
+    quizzes = Quiz.query.order_by(Quiz.date_of_quiz).all()
 
     quizzes_data = []
     for quiz in quizzes:
@@ -293,6 +293,9 @@ def summary():
 @login_admin_required
 def search():
     query = request.args.get("search", "").strip()
+    
+    # Users
+    users = User.query.filter(User.username.ilike(f"%{query}%")).all()
 
     # Subjects
     subjects = Subject.query.filter(Subject.name.ilike(f"%{query}%")).all()
@@ -316,11 +319,11 @@ def search():
         chapter = Chapter.query.filter_by(id=quiz.chapter_id).first()
         subject = Subject.query.filter_by(id=chapter.subject_id).first()
         questions = Question.query.filter_by(quiz_id=quiz.id).all()
-        if chapter: # Make sure the chapter exists to prevent errors
+        if chapter:  # Make sure the chapter exists to prevent errors
             quiz_dict["chapter"] = chapter.name
         else:
             quiz_dict["chapter"] = None
-        if subject: # Make sure the subject exists to prevent errors
+        if subject:  # Make sure the subject exists to prevent errors
             quiz_dict["subject"] = subject.name
         else:
             quiz_dict["subject"] = None
@@ -328,6 +331,6 @@ def search():
         quizzes_data.append(quiz_dict)
 
     if current_user.is_authenticated:
-        return render_template("admin/search.html", user=current_user, subjects=subjects, chapters=chapters_data, quizes=quizzes_data)
+        return render_template("admin/search.html", user=current_user, users=users, subjects=subjects, chapters=chapters_data, quizes=quizzes_data)
     else:
         return redirect(url_for("auth.login"))

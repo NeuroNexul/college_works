@@ -1,8 +1,9 @@
-from flask import Flask, url_for, redirect
+from flask import Flask, url_for, redirect, jsonify
 from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_bcrypt import Bcrypt
 from models.models import db, create_migration, User
+from flask_swagger import swagger
 
 # Additional utility imports
 import os
@@ -43,9 +44,12 @@ app.jinja_env.globals.update(divmod=divmod)
 
 # Mount SQLAlchemy to the Flask app
 # This will allow the app to interact with a SQL database using the ORM.
+# First create the 'db' directory if it does not exist.
 #
 # DATABASE_URL: The URL to the database. This can be a local SQLite database or a remote database like PostgreSQL.
 #               Example: 'sqlite:///database.db'
+db_path = os.path.join(os.path.abspath(os.getcwd()), './db')
+os.makedirs(db_path, exist_ok=True)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + \
     os.path.join(os.path.abspath(os.getcwd()), './db/database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -126,13 +130,16 @@ def index():
     # return render_template("index.html")
     if current_user.is_authenticated:
         # Check if user is admin
-        if current_user.username == os.getenv('SERVER_ADMIN_UNAME'):
+        if current_user.role == "admin":
             return redirect(url_for("admin.index"))
         else:
             return redirect(url_for("user.dashboard"))
     else:
         return redirect(url_for("auth.login"))
 
+@app.route("/spec")
+def spec():
+    return jsonify(swagger(app))
 
 # Start the server with the 'run()' method, if the script is executed directly.
 # This is the main entry point for the application.

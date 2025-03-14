@@ -2,7 +2,8 @@
 {% block title %}Admin View{% endblock %}
 {% block content %}
     <div class="my-4 px-4">
-        <div class="d-flex flex-column flex-lg-row gap-4">
+        <!-- <div class="d-flex flex-column flex-lg-row flex-wrap gap-4"> -->
+        <div class="d-grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); grid-template-rows: masonry;">
 
             {% if data|length == 0 %}
                 <div class="alert alert-warning" role="alert">
@@ -11,7 +12,7 @@
             {% endif %}
 
             {% for subject in data %}
-                <div class="col-lg-6">
+                <div class="width-100">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">{{ subject.name }}</h5>
