@@ -1,12 +1,23 @@
 from flask import Flask, url_for, redirect, jsonify
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 
 
 # Additional utility imports
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Load db
+from db.db import db, create_migration
+from routes.auth import create_admin_user
+
+# Import the User model
+from db.models import User
+
+# Load all routes
+from routes import auth
 
 # Load environment variables from a .env file
 # This is useful to keep sensitive data like API keys out of the codebase.
@@ -31,7 +42,12 @@ app.config.from_object(__name__)
 
 # Enable CORS (Cross-Origin Resource Sharing)
 # This allows the server to accept requests from different origins, which is useful for APIs.
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+# Initialize JWTManager for handling JSON Web Tokens
+# This will be used for user authentication and authorization.
+# It allows you to create, decode, and verify JWTs.
+jwt = JWTManager(app)
 
 # Add divmod to the Jinja2 environment
 app.jinja_env.globals.update(divmod=divmod)
@@ -55,6 +71,9 @@ app.url_map.default_subdomain = ""
 # The secret key is used to secure the session data.
 # It should be a random string with high entropy.
 app.secret_key = os.getenv("SECRET_KEY")
+app.config["JWT_SECRET_KEY"] = os.getenv("SECRET_KEY")
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = True
 
 
 # Initialize the Bcrypt extension
@@ -63,8 +82,40 @@ bcrypt = Bcrypt(app)
 app.config["BCRYPT"] = bcrypt
 
 
-@app.route("/", subdomain="<subdomain>")
-@app.route("/", subdomain="")
+# Mount SQLAlchemy to the Flask app
+# This will allow the app to interact with a SQL database using the ORM.
+# First create the 'db' directory if it does not exist.
+#
+# DATABASE_URL: The URL to the database. This can be a local SQLite database or a remote database like PostgreSQL.
+#               Example: 'sqlite:///database.db'
+db_path = os.path.join(os.path.abspath(os.getcwd()), './db')
+os.makedirs(db_path, exist_ok=True)
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///' + \
+    os.path.join(os.path.abspath(os.getcwd()), './db/database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize the database with the app
+# And do the migrations
+db.init_app(app)
+create_migration(app)
+
+# Create the tables in the database if they do not exist
+with app.app_context():
+    db.create_all()
+
+    # Create an admin user if it doesn't exist
+    create_admin_user()
+
+
+# Import the routes blueprints
+# This is a common pattern to keep the code organized.
+# Each blueprint can have its own routes and views.
+# The blueprints can be registered with the Flask application.
+app.register_blueprint(auth.bp, url_prefix="/api/auth")
+
+
+@app.route("/api", subdomain="<subdomain>")
+@app.route("/api", subdomain="")
 def index(subdomain=None):
     """
     The index route serves the main page of the application.
@@ -73,6 +124,27 @@ def index(subdomain=None):
     if subdomain:
         return redirect(url_for("index", _external=True, _scheme="http", subdomain=subdomain))
     return jsonify({"message": "Welcome to the Vehicle Parking App!"})
+
+
+@app.route("/api/profile")
+@jwt_required()
+def user_profile():
+    # get_jwt_identity() now returns a STRING
+    current_user_id_str = get_jwt_identity()
+
+    # BEST PRACTICE
+    # Convert the string ID back to an integer for database queries
+    user = User.query.get(int(current_user_id_str))
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    return jsonify(
+        id=user.id,
+        email=user.email,
+        fullName=user.full_name,
+        role=user.role
+    )
 
 
 # Start the server with the 'run()' method, if the script is executed directly.

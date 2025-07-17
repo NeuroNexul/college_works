@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import router from '@/router'
+import { useAuth } from '@/stores/auth'
 
 // useRoute provides access to the current route object
 const route = useRoute()
+const { login } = useAuth()
 
 // This computed property determines which tab should be active
 // based on the URL path. It makes the component reactive to URL changes.
@@ -15,7 +18,7 @@ const activeTab = computed(() => {
   return 'login'
 })
 
-// --- FORM HANDLING ---
+// FORM HANDLING
 const loginForm = ref({
   email: '',
   password: '',
@@ -31,17 +34,67 @@ const signupForm = ref({
   pin: '',
 })
 
-const handleLogin = () => {
+const isLoading = ref(false)
+
+const errors = ref({
+  login: '',
+  signup: '',
+})
+
+const handleLogin = async () => {
   console.log('Logging in with:', loginForm.value)
-  // TODO: Add API call to backend for login
+
+  // Reset any previous errors
+  errors.value.login = ''
+  isLoading.value = true
+
+  try {
+    await login({
+      email: loginForm.value.email,
+      password: loginForm.value.password,
+      rememberMe: loginForm.value.rememberMe,
+    })
+    // Redirect happens inside the login action
+  } catch (err: any) {
+    errors.value.login = err.message || 'An error occurred.'
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const handleSignup = () => {
+const handleSignup = async () => {
   console.log('Signing up with:', signupForm.value)
-  // TODO: Add validation and API call to backend for signup
+
+  const res = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: signupForm.value.name,
+      email: signupForm.value.email,
+      password: signupForm.value.password,
+      confirmPassword: signupForm.value.confirmPassword,
+      address: signupForm.value.address,
+      pin: signupForm.value.pin,
+    }),
+  })
+
+  if (res.ok) {
+    const data = await res.json()
+
+    // Redirect to the login page or show a success message
+    router.push('/login')
+    errors.value.signup = '' // Clear any previous signup errors
+    console.log('Signup successful:', data)
+  } else {
+    const error = await res.json()
+    errors.value.signup = error.message || 'Signup failed. Please try again.'
+    console.error('Signup failed:', error)
+  }
 }
 
-// --- TRANSITION HOOKS FOR SMOOTH HEIGHT ANIMATION ---
+// TRANSITION HOOKS FOR SMOOTH HEIGHT ANIMATION
 const onBeforeLeave = (el: Element) => {
   // Set the container's height to the leaving element's height
   // to prevent the container from collapsing during the transition.
@@ -79,6 +132,24 @@ const onAfterEnter = (el: Element) => {
           >
         </li>
       </ul>
+
+      <!-- Errors -->
+      <div
+        v-if="errors.login && activeTab === 'login'"
+        class="alert alert-danger py-2 d-flex gap-3"
+        role="alert"
+      >
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ errors.login }}
+      </div>
+      <div
+        v-if="errors.signup && activeTab === 'signup'"
+        class="alert alert-danger py-2 d-flex gap-3"
+        role="alert"
+      >
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ errors.signup }}
+      </div>
 
       <!-- Tab Content -->
       <div class="tab-content" id="myTabContent">
@@ -132,7 +203,7 @@ const onAfterEnter = (el: Element) => {
                   <a href="#">Forgot Password?</a>
                 </div>
               </div>
-              <button type="submit" class="btn btn-custom">Login</button>
+              <button type="submit" class="btn btn-custom" :disabled="isLoading">Login</button>
             </form>
           </div>
 
@@ -218,6 +289,10 @@ const onAfterEnter = (el: Element) => {
 </template>
 
 <style scoped>
+/* Ensure you have Bootstrap Icons installed or linked for the icon */
+/* npm install bootstrap-icons */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
 .form-container {
   background: var(--form-bg);
   border-radius: 20px;
@@ -342,7 +417,7 @@ const onAfterEnter = (el: Element) => {
   }
 }
 
-/* --- Transition Styles --- */
+/* Transition Styles */
 /* These classes are used by the <Transition> component */
 .form-fade-enter-active,
 .form-fade-leave-active {
