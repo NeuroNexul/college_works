@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import NavBar from '@/components/NavBar.vue'
 </script>
 
 <template>
-  <RouterView />
+  <nav-bar />
+
+  <main class="main-container w-100 overflow-auto">
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+  </main>
 </template>
 
 <style>
@@ -31,9 +40,26 @@ body {
     var(--background-end)
   );
   min-height: 100vh;
+  padding-top: 65px; /* Adjust based on your navbar height */
   overflow: hidden;
   color: var(--text-color);
 
   color-scheme: dark;
+}
+
+.main-container {
+  height: calc(100dvh - 65px); /* Adjust based on your navbar height */
+  height: calc(100vh - 65px); /* Fallback for browsers that don't support 100dvh */
+}
+
+/* Add this CSS to App.vue or your main CSS file for page transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

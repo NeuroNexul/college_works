@@ -117,7 +117,7 @@ const onAfterEnter = (el: Element) => {
 </script>
 
 <template>
-  <main class="d-grid vh-100 p-4 overflow-auto" style="place-items: center">
+  <main class="d-grid h-100 p-4 overflow-auto" style="place-items: center">
     <div class="form-container">
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="myTab" role="tablist">

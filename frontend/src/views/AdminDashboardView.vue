@@ -1,10 +1,6 @@
-<script setup lang="ts">
-import NavBar from '@/components/NavBar.vue'
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <nav-bar />
-
   <div class="user-dashboard">
     <h1>Admin Dashboard</h1>
     <p>Welcome to your dashboard!</p>
