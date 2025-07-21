@@ -1,7 +1,8 @@
 from flask import Flask, url_for, redirect, jsonify
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager
+from datetime import timedelta
 
 
 # Additional utility imports
@@ -17,7 +18,7 @@ from routes.auth import create_admin_user
 from db.models import User
 
 # Load all routes
-from routes import auth
+from routes import auth, admin, user
 
 # Load environment variables from a .env file
 # This is useful to keep sensitive data like API keys out of the codebase.
@@ -74,6 +75,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 app.config["JWT_SECRET_KEY"] = os.getenv("SECRET_KEY")
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
 app.config["JWT_COOKIE_CSRF_PROTECT"] = True
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)  # Set to 12 hours
 
 
 # Initialize the Bcrypt extension
@@ -112,6 +114,8 @@ with app.app_context():
 # Each blueprint can have its own routes and views.
 # The blueprints can be registered with the Flask application.
 app.register_blueprint(auth.bp, url_prefix="/api/auth")
+app.register_blueprint(admin.bp, url_prefix="/api/admin")
+app.register_blueprint(user.bp, url_prefix="/api")
 
 
 @app.route("/api", subdomain="<subdomain>")
@@ -126,34 +130,12 @@ def index(subdomain=None):
     return jsonify({"message": "Welcome to the Vehicle Parking App!"})
 
 
-@app.route("/api/profile")
-@jwt_required()
-def user_profile():
-    # get_jwt_identity() now returns a STRING
-    current_user_id_str = get_jwt_identity()
-
-    # BEST PRACTICE
-    # Convert the string ID back to an integer for database queries
-    user = User.query.get(int(current_user_id_str))
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-    return jsonify(
-        id=user.id,
-        email=user.email,
-        fullName=user.full_name,
-        role=user.role
-    )
-
-
 # Start the server with the 'run()' method, if the script is executed directly.
 # This is the main entry point for the application.
 #
 # host: The hostname to listen on. Defaults to '0.0.0.0'
 # port: The port of the webserver. Defaults to 5000
 # debug: If set to True, the server will automatically reload after code changes.
-
 if __name__ == "__main__":
     try:
         # Retrieve environment variables

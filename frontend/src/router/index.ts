@@ -29,15 +29,51 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/profile',
+      name: 'UserProfile',
+      component: () => import('../views/ProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/dashboard',
       name: 'UserDashboard',
       component: () => import('../views/UserDashboardView.vue'),
       meta: { requiresAuth: true, role: 'user' },
     },
     {
+      path: '/dashboard/my-parkings',
+      name: 'UserParkings',
+      component: () => import('../views/UserParkingsView.vue'),
+      meta: { requiresAuth: true, role: 'user' },
+    },
+    {
+      path: '/dashboard/summary',
+      name: 'UserSummary',
+      component: () => import('../views/UserSummaryView.vue'),
+      meta: { requiresAuth: true, role: 'user' },
+    },
+    {
       path: '/admin',
       name: 'AdminDashboard',
       component: () => import('../views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/admin/users',
+      name: 'AdminUsers',
+      component: () => import('../views/AdminUsersView.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/admin/search',
+      name: 'AdminSearch',
+      component: () => import('../views/AdminSearchView.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/admin/summary',
+      name: 'AdminSummary',
+      component: () => import('../views/AdminSummaryView.vue'),
       meta: { requiresAuth: true, role: 'admin' },
     },
     {
@@ -81,9 +117,8 @@ router.beforeEach((to, from, next) => {
       return next({ name: 'AdminDashboard' })
     }
     return next({ name: 'UserDashboard' })
-  }
-  // 3. For all other public routes
-  else {
+  } else {
+    // 3. For all other public routes
     return next()
   }
 })

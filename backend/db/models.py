@@ -101,6 +101,8 @@ class Booking(db.Model):
     vehicle_number = db.Column(db.String(20), nullable=False)
     booking_time = db.Column(
         db.DateTime, nullable=False, default=datetime.utcnow)
+    # Set when user physically parks
+    parking_time = db.Column(db.DateTime, nullable=True)
     release_time = db.Column(db.DateTime, nullable=True)  # Null until released
     # Null until calculated at release
     total_cost = db.Column(db.Float, nullable=True)

@@ -121,7 +121,8 @@ def login_user():
         # If "Remember Me" is true, set the token in a secure, HttpOnly cookie
         response = make_response(
             jsonify(user=user_data, msg="Login successful"))
-        set_access_cookies(response, access_token)
+        set_access_cookies(response, access_token,
+                           max_age=60*60*24*30)  # 30 days
         return response, 200
     else:
         # Otherwise, return the token in the JSON body

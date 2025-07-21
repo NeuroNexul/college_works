@@ -20,14 +20,15 @@ const navLinks = computed(() => {
     if (authState.user?.role === 'admin') {
       return [
         { to: { name: 'AdminDashboard' }, text: 'Dashboard', icon: 'bi bi-speedometer2' },
-        { to: { name: 'home' }, text: 'Users', icon: 'bi bi-people-fill' },
-        { to: { name: 'home' }, text: 'Summary', icon: 'bi bi-bar-chart-line-fill' },
+        { to: { name: 'AdminUsers' }, text: 'Users', icon: 'bi bi-people-fill' },
+        { to: { name: 'AdminSearch' }, text: 'Search', icon: 'bi bi-search' },
+        { to: { name: 'AdminSummary' }, text: 'Summary', icon: 'bi bi-bar-chart-line-fill' },
       ]
     } else if (authState.user?.role === 'user') {
       return [
         { to: { name: 'UserDashboard' }, text: 'Find Parking', icon: 'bi bi-search' },
-        { to: { name: 'home' }, text: 'My Parking', icon: 'bi bi-car-front-fill' },
-        { to: { name: 'home' }, text: 'History', icon: 'bi bi-clock-history' },
+        { to: { name: 'UserParkings' }, text: 'My Parking', icon: 'bi bi-car-front-fill' },
+        { to: { name: 'UserSummary' }, text: 'Summary', icon: 'bi bi-bar-chart-line-fill' },
       ]
     }
   } else {
@@ -83,7 +84,7 @@ const handleLogout = async () => {
             }}</span>
           </template>
 
-          <BDropdownItem :to="{ name: 'home' }">
+          <BDropdownItem :to="{ name: 'UserProfile' }">
             <i class="bi bi-person-lines-fill me-2"></i> Profile
           </BDropdownItem>
           <BDropdownDivider />
@@ -97,8 +98,6 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-@import url('bootstrap-icons/font/bootstrap-icons.css');
-
 /* This class is on the root element of THIS component, so it doesn't need :deep() */
 .custom-navbar {
   background-color: var(--form-bg);

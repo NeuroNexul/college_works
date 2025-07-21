@@ -8,20 +8,23 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BBadge: typeof import('bootstrap-vue-next/components/BBadge')['BBadge']
     BButton: typeof import('bootstrap-vue-next/components/BButton')['BButton']
     BCol: typeof import('bootstrap-vue-next/components/BContainer')['BCol']
     BContainer: typeof import('bootstrap-vue-next/components/BContainer')['BContainer']
+    BForm: typeof import('bootstrap-vue-next/components/BForm')['BForm']
+    BFormGroup: typeof import('bootstrap-vue-next/components/BFormGroup')['BFormGroup']
+    BFormInvalidFeedback: typeof import('bootstrap-vue-next/components/BForm')['BFormInvalidFeedback']
+    BListGroupItem: typeof import('bootstrap-vue-next/components/BListGroup')['BListGroupItem']
+    BModal: typeof import('bootstrap-vue-next/components/BModal')['BModal']
     BRow: typeof import('bootstrap-vue-next/components/BContainer')['BRow']
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
-    IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
-    IconDocumentation: typeof import('./src/components/icons/IconDocumentation.vue')['default']
-    IconEcosystem: typeof import('./src/components/icons/IconEcosystem.vue')['default']
-    IconSupport: typeof import('./src/components/icons/IconSupport.vue')['default']
-    IconTooling: typeof import('./src/components/icons/IconTooling.vue')['default']
+    LotSearchResultCard: typeof import('./src/components/LotSearchResultCard.vue')['default']
     NavBar: typeof import('./src/components/NavBar.vue')['default']
+    ParkingLotCard: typeof import('./src/components/ParkingLotCard.vue')['default']
+    ParkingLotForm: typeof import('./src/components/ParkingLotForm.vue')['default']
+    ParkingLotSpotView: typeof import('./src/components/ParkingLotSpotView.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    TheWelcome: typeof import('./src/components/TheWelcome.vue')['default']
-    WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
+    StatCard: typeof import('./src/components/StatCard.vue')['default']
   }
 }

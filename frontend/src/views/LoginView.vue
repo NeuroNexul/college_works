@@ -71,12 +71,12 @@ const handleSignup = async () => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: signupForm.value.name,
+      full_name: signupForm.value.name,
       email: signupForm.value.email,
       password: signupForm.value.password,
       confirmPassword: signupForm.value.confirmPassword,
       address: signupForm.value.address,
-      pin: signupForm.value.pin,
+      pin_code: signupForm.value.pin,
     }),
   })
 
@@ -289,10 +289,6 @@ const onAfterEnter = (el: Element) => {
 </template>
 
 <style scoped>
-/* Ensure you have Bootstrap Icons installed or linked for the icon */
-/* npm install bootstrap-icons */
-@import 'bootstrap-icons/font/bootstrap-icons.css';
-
 .form-container {
   background: var(--form-bg);
   border-radius: 20px;
