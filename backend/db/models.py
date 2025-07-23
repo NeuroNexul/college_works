@@ -41,7 +41,7 @@ class User(db.Model):
         return bcrypt.check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<User {self.email} ({self.role})>'
+        return f'<User {self.id} {self.email} ({self.role})>'
 
 
 class ParkingLot(db.Model):

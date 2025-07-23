@@ -11,7 +11,7 @@ bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @bp.route("/users", methods=["GET"])
 @admin_required()
-@cache(minutes=5)
+# @cache(minutes=5)
 def get_all_users():
     """
     Fetches a list of all non-admin users with aggregated booking statistics.
@@ -68,7 +68,7 @@ def get_all_users():
 
 @bp.route("/lots", methods=["GET"])
 @admin_required()
-@cache(minutes=5)
+# @cache(minutes=5)
 def get_all_lots():
     """
     Fetches all parking lots with detailed spot information.

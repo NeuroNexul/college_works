@@ -85,7 +85,7 @@ def update_profile():
 
 @bp.route("/lots", methods=["GET"])
 @jwt_required()
-@cache(minutes=5)
+# @cache(minutes=5)
 def get_all_lots_for_user():
     """
     Fetches a simplified list of all parking lots for the user dashboard.
@@ -125,7 +125,7 @@ def get_all_lots_for_user():
 
 @bp.route("/bookings", methods=["GET"])
 @jwt_required()
-@cache(minutes=5)
+# @cache(minutes=5)
 def get_user_bookings():
     """
     Fetches all past and present bookings for the authenticated user.
@@ -188,7 +188,7 @@ def get_user_bookings():
 
 @bp.route("/booking/<int:spot_id>", methods=["GET"])
 @jwt_required()
-@cache(minutes=5)
+# @cache(minutes=5)
 def get_booking_details(spot_id):
     """
     Fetches detailed information about a specific booking for the authenticated user.
