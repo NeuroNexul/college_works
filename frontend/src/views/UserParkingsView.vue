@@ -122,6 +122,21 @@ const handleRelease = async (bookingId: number) => {
     error.value = 'Failed to release the parking spot.'
   }
 }
+
+const handleExport = async () => {
+  try {
+    const res = await axios.post('/api/export-bookings')
+
+    if (res.status === 202) {
+      alert(
+        'Your parking history is being exported. You will receive an email with the file shortly.',
+      )
+    }
+  } catch (err) {
+    console.error(err)
+    error.value = 'Failed to export parking history.'
+  }
+}
 </script>
 
 <template>
@@ -225,7 +240,17 @@ const handleRelease = async (bookingId: number) => {
           </div>
 
           <div class="session-section past-history mt-4">
-            <h2 class="section-title">Parking History</h2>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="section-title">Parking History</h2>
+
+              <BButton
+                v-if="pastBookings.length > 0"
+                variant="outline-success"
+                @click="handleExport"
+              >
+                <i class="bi bi-save me-2"></i> Expport
+              </BButton>
+            </div>
             <div class="history-list">
               <div v-if="pastBookings.length === 0" class="empty-state-card text-center">
                 <i class="bi bi-clock-history display-4"></i>

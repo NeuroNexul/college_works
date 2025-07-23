@@ -115,15 +115,15 @@ const confirmSpotDelete = async (spotId: number) => {
     )
   ) {
     try {
-      // const response = await axios.delete(`/api/admin/lots/${selectedLot.value?.id}/spots/${spotId}`)
-      // if (response.status === 200) {
-      //   // Remove the spot from the local state
-      //   selectedLot.value!.spots = selectedLot.value!.spots.filter((s) => s.id !== spotId)
-      //   showSpotView.value = false // Close the modal after deletion
-      // } else {
-      //   console.error('Failed to delete spot:', response.data)
-      //   error.value = 'Failed to delete the parking spot. Please try again later.'
-      // }
+      const response = await axios.delete(`/api/admin/spots/${spotId}`)
+      if (response.status === 200) {
+        // Remove the spot from the local state
+        fetchLots() // Refresh the list of lots
+        showSpotView.value = false // Close the modal after deletion
+      } else {
+        console.error('Failed to delete spot:', response.data)
+        error.value = 'Failed to delete the parking spot. Please try again later.'
+      }
     } catch (err) {
       console.error(err)
       error.value = 'Failed to delete the parking spot. Please try again later.'

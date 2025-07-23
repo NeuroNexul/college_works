@@ -138,7 +138,6 @@ const handleSubmit = (event: Event) => {
             v-model.number="formData.total_spots"
             required
             min="1"
-            :disabled="isEditing"
           />
           <BFormInvalidFeedback>Must be at least 1 spot.</BFormInvalidFeedback>
         </BFormGroup>

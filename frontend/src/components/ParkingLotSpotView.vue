@@ -179,7 +179,7 @@ const formatDateTime = (isoString: string) => {
         type="submit"
         class="btn-primary-gradient"
         @click.prevent="$emit('delete', spot?.id || -1)"
-        >Delete Lot</BButton
+        >Delete Spot</BButton
       >
     </div>
   </div>

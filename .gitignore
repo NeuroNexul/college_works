@@ -29,8 +29,15 @@ coverage
 
 *.tsbuildinfo
 
+.venv
 .env
 .env.local
 *.db
 __pycache__
 *.pyc
+seed_log.txt
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+celerybeat-schedule-*

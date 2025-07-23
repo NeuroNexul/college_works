@@ -3,6 +3,9 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
+import redis
+from celery import Celery, Task
+from celery.schedules import crontab
 
 
 # Additional utility imports
@@ -54,6 +57,8 @@ jwt = JWTManager(app)
 app.jinja_env.globals.update(divmod=divmod)
 
 # Define basic configuration for the app
+app.redis_client = redis.StrictRedis(
+    host='localhost', port=6379, db=0, decode_responses=True)
 
 # Enable subdomain matching
 # This allows the app to match subdomains in the URL routes and serve different content based on the subdomain.
@@ -128,6 +133,49 @@ def index(subdomain=None):
     if subdomain:
         return redirect(url_for("index", _external=True, _scheme="http", subdomain=subdomain))
     return jsonify({"message": "Welcome to the Vehicle Parking App!"})
+
+
+global celery_init_app
+# Celery
+
+
+def celery_init_app(app: Flask) -> Celery:
+    class FlaskTask(Task):
+        def __call__(self, *args: object, **kwargs: object) -> object:
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery_app = Celery(app.name, task_cls=FlaskTask)
+    celery_app.config_from_object(app.config["CELERY"])
+    # celery_app.Task = FlaskTask
+    celery_app.set_default()
+    app.extensions["celery"] = celery_app
+    return celery_app
+
+
+app.config.from_mapping(
+    CELERY=dict(
+        broker_url="redis://localhost:6379/1",
+        result_backend="redis://localhost:6379/2",
+        task_ignore_result=True,
+        beat_schedule={
+            # Name your scheduled task
+            'send-daily-reminders': {
+                'task': 'tasks.send_daily_reminders',  # Path to the task function
+                # 'schedule': crontab(hour=0, minute=0),  # Run once every day at midnight
+                'schedule': 30.0,  # Run once every 24 hours (in seconds)
+            },
+            'send-monthly-reports': {
+                'task': 'tasks.send_monthly_reports',
+                'schedule': crontab(day_of_month='1', hour=0, minute=0),
+                # Run once every 60 seconds (for testing purposes, change to 30 days in production)
+                # 'schedule': 60,
+            },
+        },
+    ),
+)
+
+celery_app = celery_init_app(app)
 
 
 # Start the server with the 'run()' method, if the script is executed directly.

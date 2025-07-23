@@ -80,7 +80,7 @@ class ParkingSpot(db.Model):
                        name='spot_status_enum'), nullable=False, default='Available')
 
     # Relationship to Bookings
-    bookings = db.relationship('Booking', backref='spot', lazy=True)
+    # bookings = db.relationship('Booking', backref='spot', lazy=True)
 
     def __repr__(self):
         return f'<ParkingSpot {self.id} (Lot {self.lot_id}) - {self.status}>'
@@ -95,8 +95,7 @@ class Booking(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    spot_id = db.Column(db.Integer, db.ForeignKey(
-        'parking_spots.id'), nullable=False)
+    spot_id = db.Column(db.Integer, nullable=False)
 
     vehicle_number = db.Column(db.String(20), nullable=False)
     booking_time = db.Column(

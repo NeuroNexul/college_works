@@ -4,14 +4,11 @@ from db.models import ParkingLot, ParkingSpot, Booking, User
 from db.db import db
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from sqlalchemy.orm import joinedload
 from sqlalchemy import func, desc
+from utils.decorators import cache
+from tasks import export_user_bookings_to_csv
 
 bp = Blueprint("user", __name__)
-
-# =================================================================
-# GET USER PROFILE (ENHANCED)
-# =================================================================
 
 
 @bp.route("/profile", methods=["GET"])
@@ -51,9 +48,6 @@ def get_profile():
         return jsonify({"message": "An error occurred fetching profile."}), 500
 
 
-# =================================================================
-# UPDATE USER PROFILE
-# =================================================================
 @bp.route("/profile", methods=["PUT"])
 @jwt_required()
 def update_profile():
@@ -91,6 +85,7 @@ def update_profile():
 
 @bp.route("/lots", methods=["GET"])
 @jwt_required()
+@cache(minutes=5)
 def get_all_lots_for_user():
     """
     Fetches a simplified list of all parking lots for the user dashboard.
@@ -130,6 +125,7 @@ def get_all_lots_for_user():
 
 @bp.route("/bookings", methods=["GET"])
 @jwt_required()
+@cache(minutes=5)
 def get_user_bookings():
     """
     Fetches all past and present bookings for the authenticated user.
@@ -137,21 +133,33 @@ def get_user_bookings():
     try:
         user_id = int(get_jwt_identity())
 
-        # Efficient Query
-        # We use joinedload to eagerly load the related Spot and Lot objects
-        # in a single, efficient JOIN query. This prevents a separate query
-        # for each booking's lot and spot details.
-        user_bookings = Booking.query.options(
-            joinedload(Booking.spot).joinedload(ParkingSpot.lot)
-        ).filter_by(
-            user_id=user_id
-        ).order_by(
-            Booking.release_time.desc()  # Order by most recent booking time
-        ).all()
+        # 1. Get all bookings for the user
+        user_bookings = Booking.query.filter_by(
+            user_id=user_id).order_by(Booking.booking_time.desc()).all()
+        if not user_bookings:
+            return jsonify([]), 200
+
+        # 2. Collect all unique spot and lot IDs needed
+        spot_ids = {b.spot_id for b in user_bookings}
+        spots = ParkingSpot.query.filter(ParkingSpot.id.in_(spot_ids)).all()
+        lot_ids = {s.lot_id for s in spots}
+        lots = ParkingLot.query.filter(ParkingLot.id.in_(lot_ids)).all()
+
+        # 3. Create mapping dictionaries for fast lookups
+        spots_map = {s.id: s for s in spots}
+        lots_map = {l.id: l for l in lots}
 
         # Format the Results
         results = []
         for booking in user_bookings:
+            spot = spots_map.get(booking.spot_id)
+            if not spot:
+                continue  # Should not happen, but a good safeguard
+
+            lot = lots_map.get(spot.lot_id)
+            if not lot:
+                continue
+
             results.append({
                 'id': booking.id,
                 # Use .isoformat() to convert datetime objects to ISO 8601 strings
@@ -161,12 +169,12 @@ def get_user_bookings():
                 'total_cost': booking.total_cost,
                 'vehicle_number': booking.vehicle_number,
                 'spot': {
-                    'id': booking.spot.id,
+                    'id': spot.id,
                 },
                 'lot': {
-                    'id': booking.spot.lot.id,
-                    'name': booking.spot.lot.name,
-                    'address': booking.spot.lot.address,
+                    'id': lot.id,
+                    'name': lot.name,
+                    'address': lot.address,
                 }
             })
 
@@ -175,20 +183,23 @@ def get_user_bookings():
     except Exception as e:
         # In a real app, you would log this error.
         print(f"Error fetching user bookings: {e}")
-        return jsonify({"message": "An error occurred while fetching your bookings."}), 500
+        return jsonify({"message": "An error occurred while fetching your bookings.", "err": e}), 500
 
 
 @bp.route("/booking/<int:spot_id>", methods=["GET"])
 @jwt_required()
+@cache(minutes=5)
 def get_booking_details(spot_id):
     """
     Fetches detailed information about a specific booking for the authenticated user.
     """
     try:
-        booking = Booking.query.filter_by(
-            spot_id=spot_id, release_time=None).first()
+        # Get the booking by spot_id
+        booking = Booking.query.filter_by(spot_id=spot_id).first()
 
-        if not booking:
+        spot = ParkingSpot.query.get(spot_id)
+
+        if not booking or not spot:
             return jsonify({"message": "Booking not found."}), 404
 
         # Format the response
@@ -207,13 +218,13 @@ def get_booking_details(spot_id):
                 'address': booking.user.address
             },
             'spot': {
-                'id': booking.spot.id,
-                'status': booking.spot.status,
+                'id': spot.id,
+                'status': spot.status,
                 'lot': {
-                    'id': booking.spot.lot.id,
-                    'name': booking.spot.lot.name,
-                    'address': booking.spot.lot.address,
-                    'price_per_hour': booking.spot.lot.price_per_hour,
+                    'id': spot.lot.id,
+                    'name': spot.lot.name,
+                    'address': spot.lot.address,
+                    'price_per_hour': spot.lot.price_per_hour,
                 }
             }
         }
@@ -222,7 +233,7 @@ def get_booking_details(spot_id):
     except Exception as e:
         # In a real app, you would log this error.
         print(f"Error fetching booking details for spot {spot_id}: {e}")
-        return jsonify({"message": "An error occurred while fetching booking details."}), 500
+        return jsonify({"message": "An error occurred while fetching booking details.", "err": f"{e}"}), 500
 
 
 @bp.route("/reserve", methods=["POST"])
@@ -259,13 +270,14 @@ def reserve_spot():
 def park_car(booking_id):
     user_id = int(get_jwt_identity())
     booking = Booking.query.get_or_404(booking_id)
+    spot = ParkingSpot.query.get_or_404(booking.spot_id)
 
     # Security check: ensure the booking belongs to the user
     if booking.user_id != user_id:
         return jsonify({"message": "Unauthorized"}), 403
 
     # Logic check: can only park if the spot is 'Reserved'
-    if booking.spot.status != 'Occupied' or booking.parking_time is not None:
+    if spot.status != 'Occupied' or booking.parking_time is not None:
         return jsonify({"message": "This booking is not in a reservable state."}), 400
 
     # Check if user has any other active parking session with the same vehicle
@@ -281,7 +293,7 @@ def park_car(booking_id):
 
     try:
         booking.parking_time = datetime.utcnow()
-        booking.spot.status = 'Occupied'
+        spot.status = 'Occupied'
         db.session.commit()
         return jsonify({"message": "Parking session started."}), 200
     except Exception as e:
@@ -294,12 +306,13 @@ def park_car(booking_id):
 def release_spot(booking_id):
     user_id = int(get_jwt_identity())
     booking = Booking.query.get_or_404(booking_id)
+    spot = ParkingSpot.query.get_or_404(booking.spot_id)
 
     if booking.user_id != user_id:
         return jsonify({"message": "Unauthorized"}), 403
 
     # Logic check: Spot must be occupied and have a parking_time
-    if booking.spot.status != 'Occupied' or not booking.parking_time:
+    if spot.status != 'Occupied' or not booking.parking_time:
         return jsonify({"message": "This booking is not active."}), 400
 
     try:
@@ -311,10 +324,10 @@ def release_spot(booking_id):
         # Round up to the next hour
         duration_hours = (duration_seconds / 3600)
 
-        price_per_hour = booking.spot.lot.price_per_hour
+        price_per_hour = spot.lot.price_per_hour
         booking.total_cost = duration_hours * price_per_hour
 
-        booking.spot.status = 'Available'
+        spot.status = 'Available'
         db.session.commit()
 
         return jsonify({
@@ -327,67 +340,97 @@ def release_spot(booking_id):
         return jsonify({"message": "Failed to end parking session.", "error": str(e)}), 500
 
 
-# =================================================================
-# GET USER SUMMARY DASHBOARD DATA
-# =================================================================
 @bp.route("/summary", methods=["GET"])
 @jwt_required()
+@cache(minutes=5)
 def get_user_summary():
+    try:
+        user_id = int(get_jwt_identity())
+
+        # Base query for all completed bookings by the user
+        base_query = Booking.query.filter(
+            Booking.user_id == user_id,
+            Booking.release_time.isnot(None)
+        )
+
+        # 1. KPI Cards Data (No change needed here as it only uses Booking)
+        kpi_stats = base_query.with_entities(
+            func.count(Booking.id).label('total_sessions'),
+            func.coalesce(func.sum(Booking.total_cost),
+                          0).label('total_spent'),
+            func.avg(Booking.total_cost).label('avg_cost_per_session')
+        ).one_or_none()
+
+        if kpi_stats is None:  # Handle case where user has no past bookings
+            kpi_stats = {'total_sessions': 0,
+                         'total_spent': 0, 'avg_cost_per_session': 0}
+
+        # 2. Most Used Lot (Refactored with explicit joins)
+        favorite_lot_query = base_query.join(
+            ParkingSpot, Booking.spot_id == ParkingSpot.id
+        ).join(
+            ParkingLot, ParkingSpot.lot_id == ParkingLot.id
+        ).with_entities(
+            ParkingLot.name,
+            func.count(Booking.id).label('visit_count')
+        ).group_by(
+            ParkingLot.name
+        ).order_by(
+            desc('visit_count')
+        ).first()
+
+        # 3. Spending Per Month (No change needed)
+        six_months_ago = datetime.utcnow() - relativedelta(months=6)
+        monthly_spending = base_query.filter(Booking.release_time >= six_months_ago)\
+            .with_entities(
+                func.strftime('%Y-%m', Booking.release_time).label('month'),
+                func.sum(Booking.total_cost).label('total')
+        ).group_by('month').order_by('month').all()
+
+        # 4. Parking by Day of Week (No change needed)
+        day_of_week_map = {0: 'Sun', 1: 'Mon', 2: 'Tue',
+                           3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat'}
+        day_of_week_stats = base_query\
+            .with_entities(func.strftime('%w', Booking.release_time).label('dow'), func.count(Booking.id))\
+            .group_by('dow').all()
+
+        day_of_week_data = {day: 0 for day in day_of_week_map.values()}
+        for dow, count in day_of_week_stats:
+            day_name = day_of_week_map[int(dow)]
+            day_of_week_data[day_name] = count
+
+        # Assemble final JSON payload
+        summary_data = {
+            "kpis": {
+                "totalSessions": kpi_stats.total_sessions,
+                "totalSpent": float(kpi_stats.total_spent),
+                "avgCost": float(kpi_stats.avg_cost_per_session or 0)
+            },
+            "favoriteLot": {
+                "name": favorite_lot_query.name if favorite_lot_query else "N/A",
+                "visits": favorite_lot_query.visit_count if favorite_lot_query else 0
+            },
+            "monthlySpending": [{"month": r.month, "total": float(r.total)} for r in monthly_spending],
+            "dayOfWeekParking": day_of_week_data
+        }
+
+        return jsonify(summary_data)
+
+    except Exception as e:
+        print(f"Error fetching user summary: {e}")
+        return jsonify({"message": "An error occurred while fetching your summary."}), 500
+
+
+@bp.route("/export-bookings", methods=["POST"])
+@jwt_required()
+def trigger_export():
+    """
+    API endpoint for the user to trigger their CSV export job.
+    """
     user_id = int(get_jwt_identity())
 
-    # Base query for all completed bookings by the user
-    base_query = Booking.query.filter(
-        Booking.user_id == user_id,
-        Booking.release_time.isnot(None)
-    )
+    # Use .delay() to execute the task asynchronously via Celery
+    export_user_bookings_to_csv.delay(user_id)
 
-    # 1. KPI Cards Data
-    kpi_stats = base_query.with_entities(
-        func.count(Booking.id).label('total_sessions'),
-        func.coalesce(func.sum(Booking.total_cost), 0).label('total_spent'),
-        func.avg(Booking.total_cost).label('avg_cost_per_session')
-    ).one()
-
-    # 2. Most Used Lot
-    favorite_lot_query = base_query.join(Booking.spot).join(ParkingSpot.lot)\
-        .with_entities(ParkingLot.name, func.count(Booking.id).label('visit_count'))\
-        .group_by(ParkingLot.name).order_by(desc('visit_count')).first()
-
-    # 3. Spending Per Month (Last 6 Months)
-    six_months_ago = datetime.utcnow() - relativedelta(months=6)
-    monthly_spending = base_query.filter(Booking.release_time >= six_months_ago)\
-        .with_entities(
-            func.strftime('%Y-%m', Booking.release_time).label('month'),
-            func.sum(Booking.total_cost).label('total')
-    ).group_by('month').order_by('month').all()
-
-    # 4. Parking by Day of Week
-    day_of_week_map = {0: 'Sun', 1: 'Mon', 2: 'Tue',
-                       3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat'}
-    day_of_week_stats = base_query\
-        .with_entities(func.strftime('%w', Booking.release_time).label('dow'), func.count(Booking.id))\
-        .group_by('dow').all()
-
-    # Format day of week data
-    # { 'Sun': 0, 'Mon': 0, ... }
-    day_of_week_data = {day: 0 for day in day_of_week_map.values()}
-    for dow, count in day_of_week_stats:
-        day_name = day_of_week_map[int(dow)]
-        day_of_week_data[day_name] = count
-
-    # Assemble final JSON payload
-    summary_data = {
-        "kpis": {
-            "totalSessions": kpi_stats.total_sessions,
-            "totalSpent": float(kpi_stats.total_spent),
-            "avgCost": float(kpi_stats.avg_cost_per_session or 0)
-        },
-        "favoriteLot": {
-            "name": favorite_lot_query.name if favorite_lot_query else "N/A",
-            "visits": favorite_lot_query.visit_count if favorite_lot_query else 0
-        },
-        "monthlySpending": [{"month": r.month, "total": float(r.total)} for r in monthly_spending],
-        "dayOfWeekParking": day_of_week_data
-    }
-
-    return jsonify(summary_data)
+    # Return an immediate response to the user
+    return jsonify({"message": "Your booking export has started. You will receive an email shortly with your data."}), 202

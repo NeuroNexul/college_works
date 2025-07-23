@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils.decorators import admin_required
+from utils.decorators import admin_required, cache
 from db.db import db
 from db.models import ParkingLot, ParkingSpot, Booking, User
 from sqlalchemy import func, desc, or_
@@ -9,11 +9,9 @@ from datetime import datetime, timedelta
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
-# =================================================================
-# GET ALL REGISTERED USERS (ENHANCED)
-# =================================================================
 @bp.route("/users", methods=["GET"])
 @admin_required()
+@cache(minutes=5)
 def get_all_users():
     """
     Fetches a list of all non-admin users with aggregated booking statistics.
@@ -68,11 +66,9 @@ def get_all_users():
         return jsonify({"message": "An error occurred while fetching users."}), 500
 
 
-# =================================================================
-# FETCH ALL PARKING LOTS - (Read)
-# =================================================================
 @bp.route("/lots", methods=["GET"])
 @admin_required()
+@cache(minutes=5)
 def get_all_lots():
     """
     Fetches all parking lots with detailed spot information.
@@ -107,9 +103,6 @@ def get_all_lots():
         return jsonify({"message": "An error occurred fetching lots.", "error": str(e)}), 500
 
 
-# =================================================================
-# ADD A NEW PARKING LOT - (Create)
-# =================================================================
 @bp.route("/lots", methods=["POST"])
 @admin_required()
 def add_parking_lot():
@@ -159,9 +152,6 @@ def add_parking_lot():
         return jsonify({"message": "Failed to create parking lot.", "error": str(e)}), 500
 
 
-# =================================================================
-# EDIT AN EXISTING PARKING LOT - (Update)
-# =================================================================
 @bp.route("/lots/<int:lot_id>", methods=["PUT"])
 @admin_required()
 def edit_parking_lot(lot_id):
@@ -172,13 +162,45 @@ def edit_parking_lot(lot_id):
     lot = ParkingLot.query.get_or_404(lot_id)
     data = request.get_json()
 
+    current_total_spots = lot.total_spots
+
     # Update fields if they exist in the request data
     lot.name = data.get('name', lot.name)
     lot.address = data.get('address', lot.address)
     lot.pin_code = data.get('pin_code', lot.pin_code)
     lot.price_per_hour = data.get('price_per_hour', lot.price_per_hour)
+    lot.total_spots = data.get('total_spots', lot.total_spots)
 
-    # Note: We deliberately ignore `total_spots` as per requirements.
+    # Validation: Ensure total_spots is a positive integer
+    if 'total_spots' in data:
+        if not isinstance(data['total_spots'], int) or data['total_spots'] <= 0:
+            return jsonify({"message": "Total spots must be a positive integer"}), 400
+
+        # The total_spot shouldn't be less than occupied or reserved spots (parking_time is None)
+        occupied_or_reserved_spots = ParkingSpot.query.filter(
+            ParkingSpot.lot_id == lot.id,
+            Booking.parking_time.is_(None)
+        ).join(Booking, Booking.spot_id == ParkingSpot.id).count()
+
+        if data['total_spots'] < occupied_or_reserved_spots:
+            return jsonify({"message": "Total spots cannot be less than currently occupied or reserved spots."}), 400
+        else:
+            # If total_spots is being changed, we need to adjust the spots accordingly
+            if data['total_spots'] > current_total_spots:
+                # Add new available spots
+                new_spots = [
+                    ParkingSpot(lot_id=lot.id, status='Available')
+                    for _ in range(data['total_spots'] - current_total_spots)
+                ]
+                db.session.bulk_save_objects(new_spots)
+            elif data['total_spots'] < current_total_spots:
+                # Remove excess spots (only if they are available)
+                excess_spots = ParkingSpot.query.filter(
+                    ParkingSpot.lot_id == lot.id,
+                    ParkingSpot.status == 'Available'
+                ).order_by(desc(ParkingSpot.id)).limit(current_total_spots - data['total_spots']).all()
+                for spot in excess_spots:
+                    db.session.delete(spot)
 
     try:
         db.session.commit()
@@ -195,10 +217,6 @@ def edit_parking_lot(lot_id):
         db.session.rollback()
         return jsonify({"message": "Failed to update parking lot.", "error": str(e)}), 500
 
-
-# =================================================================
-# DELETE A PARKING LOT - (Delete)
-# =================================================================
 
 @bp.route("/lots/<int:lot_id>", methods=["DELETE"])
 @admin_required()
@@ -225,11 +243,32 @@ def delete_parking_lot(lot_id):
         return jsonify({"message": "Failed to delete parking lot.", "error": str(e)}), 500
 
 
-# =================================================================
-# GET ADMIN SUMMARY DASHBOARD DATA
-# =================================================================
+@bp.route("/spots/<int:spot_id>", methods=["DELETE"])
+@admin_required()
+def delete_parking_spot(spot_id):
+    """
+    Deletes a specific parking spot if it is available.
+    """
+    spot = ParkingSpot.query.get_or_404(spot_id)
+
+    # Validation: Check if the spot is occupied
+    if spot.status != 'Available':
+        return jsonify({"message": "Cannot delete spot: it is currently occupied."}), 400
+
+    try:
+        spot.lot.total_spots -= 1  # Decrease the total spots in the lot
+
+        db.session.delete(spot)
+        db.session.commit()
+        return jsonify({"message": f"Parking spot {spot.id} was deleted successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Failed to delete parking spot.", "error": str(e)}), 500
+
+
 @bp.route("/summary", methods=["GET"])
 @admin_required()
+@cache(minutes=5)
 def get_admin_summary():
 
     # 1. KPI Cards Data
@@ -298,11 +337,9 @@ def get_admin_summary():
     return jsonify(summary_data)
 
 
-# =================================================================
-# UNIFIED ADMIN SEARCH
-# =================================================================
 @bp.route("/search", methods=["GET"])
 @admin_required()
+@cache(minutes=5)
 def admin_search():
     """
     A unified search endpoint for admins.
@@ -364,11 +401,13 @@ def admin_search():
             ).all()
             # For each booking, we find its lot and format it like a lot result
             for booking in bookings:
-                lot = booking.spot.lot
+                spot = ParkingSpot.query.get(booking.spot_id)
+                lot = spot.lot
+                spots = ParkingSpot.query.filter_by(lot_id=lot.id).all()
                 occupied_count = ParkingSpot.query.filter_by(
                     lot_id=lot.id, status='Occupied').count()
                 spots_data = [{'id': spot.id, 'status': spot.status}
-                              for spot in lot.spots]
+                              for spot in spots]
                 # Add extra info to identify the specific vehicle
                 lot_result = {
                     'id': lot.id, 'name': lot.name, 'total_spots': lot.total_spots,
