@@ -95,6 +95,7 @@ def login_user():
         return jsonify({"message": "Email and password are required"}), 400
 
     user = User.query.filter_by(email=email).first()
+    print(f"User found: {user}")
 
     # Authenticate User
     # Check if user exists and password is correct

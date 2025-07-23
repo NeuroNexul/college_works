@@ -90,7 +90,7 @@ router.beforeEach((to, from, next) => {
   const isAuthenticated = authState.isAuthenticated
 
   const requiresAuth = to.meta.requiresAuth
-  const requiredRole = to.meta.role as 'admin' | 'user' | undefined
+  const requiredRole = to.meta.role
 
   // 1. If route requires authentication
   if (requiresAuth) {
