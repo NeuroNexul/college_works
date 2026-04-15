@@ -1,0 +1,133 @@
+/* Style the backdrop overlay */
+.modal-backdrop {
+  background-color: var(--background-start);
+  opacity: 0.7;
+}
+
+/* Style the main modal container */
+.modal-content {
+  background-color: var(--form-bg);
+  color: var(--text-color);
+  border: 1px solid var(--input-border);
+  border-radius: 16px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+/* Style the modal header */
+.modal-header {
+  border-bottom: 1px solid var(--input-border);
+  padding: 1rem 1.5rem;
+}
+
+.modal-header .modal-title {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+/* Style the close ('X') button to be visible on a dark background */
+.modal-header .btn-close {
+  /* This filter turns the default black SVG icon to a bright white */
+  filter: invert(1) grayscale(100) brightness(2);
+  transition: all 0.2s ease;
+}
+
+.modal-header .btn-close:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Style the modal body */
+.modal-body {
+  padding: 1.5rem;
+}
+
+/* Style the modal footer */
+.modal-footer {
+  border-top: 1px solid var(--input-border);
+  padding: 0.5rem 1.5rem;
+}
+
+/* --- You can also style form elements within the modal globally here --- */
+.modal-body .form-control {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--input-border) !important;
+}
+
+.modal-body .form-control:focus {
+  box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25);
+  border-color: var(--highlight-color) !important;
+}
+
+.modal-body .form-label {
+  color: var(--text-color-muted);
+}
+
+input::placeholder {
+  color: var(--text-color-muted) !important;
+  opacity: 1; /* Ensures full opacity for placeholder text */
+}
+
+/* Fix for black form labels */
+.form-label {
+  color: var(--text-color-muted) !important;
+}
+
+/* Optional: Improve contrast for form-text/descriptions */
+.form-text {
+  color: var(--text-color-muted) !important;
+  opacity: 0.8;
+}
+
+/* Ensure disabled inputs have a readable text color */
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: var(--text-color-muted) !important;
+  opacity: 0.7;
+}
+
+.form-select {
+  /* Box Styling */
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 6px; /* Match other inputs */
+
+  /* Custom Arrow Icon */
+  /* This SVG is a chevron-down icon, colored with your theme's highlight color */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2320c997' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+
+  /* Hide the default browser arrow */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Focus State */
+.form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25) !important;
+  border-color: var(--highlight-color) !important;
+}
+
+/* --- Styling for the <option> elements --- */
+/* This is the key part. It works on some browsers (like Chrome/Edge on Desktop)
+   but may not work on others (like Safari or mobile browsers). */
+
+.form-select option {
+  background-color: var(--background-start); /* Dark background for the dropdown list */
+  color: var(--text-color); /* Light text for options */
+  padding: 10px; /* Note: Padding may not be respected everywhere */
+}
+
+/* You can even add a hover effect, though support is limited */
+/* This requires a very specific selector to override browser defaults */
+select:focus > option:hover,
+select:focus > option:checked {
+  background: var(--highlight-color) !important;
+  color: var(--background-start) !important;
+}
