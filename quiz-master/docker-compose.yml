@@ -1,0 +1,38 @@
+services:
+  app:
+    hostname: app
+    container_name: ${CONTAINER_NAME}-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    networks:
+      - internal
+    environment:
+      - TZ=Europe/Brussels
+
+  phpliteadmin:
+    hostname: phpliteadmin
+    container_name: ${CONTAINER_NAME}-phpliteadmin
+    image: vtacquet/phpliteadmin
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./db:/db
+    ports:
+      - "${PHPLITEADMIN_PORT}:80"
+    networks:
+      - internal
+    environment:
+      - TZ=Europe/Brussels
+      - PASSWORD=${PHPLITEADMIN_PASSWORD}
+      - LOCATION=/db
+
+networks:
+  internal:
+    driver: bridge
