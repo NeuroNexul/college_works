@@ -4,17 +4,6 @@ Welcome to my central repository for academic excellence. This space serves as a
 
 ---
 
-## 🛠 Tech Stack & Tools
-
-| Category | Skills / Tools |
-| :--- | :--- |
-| **Languages** | Python, JavaScript, TypeScript, HTML/CSS |
-| **Frameworks** | Flask, Vue.js 3, SQLAlchemy |
-| **DevOps** | Docker, Docker Compose, Git |
-| **Utilities** | Celery, Redis, Vite, Alembic |
-
----
-
 ## 👨‍💻 About Me
 
 - 🎓 **Program:** BS in Data Science and Applications, IIT Madras
